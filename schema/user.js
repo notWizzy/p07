@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
   description: String,
   occupation: String,
   // The following attributes need to be added
+  login_name: String,
+  password: String
   _id: mongoose.Schema.Types.ObjectId,
 });
 
