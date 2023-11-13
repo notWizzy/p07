@@ -25,15 +25,14 @@ class UserDetail extends React.Component {
     componentDidUpdate() {
         const new_user_id = this.props.match.params.userId;
         const current_user_id = this.state.user?._id;
-        if (current_user_id  !== new_user_id){
+        if (current_user_id !== new_user_id) {
             this.handleUserChange(new_user_id);
         }
     }
 
-    handleUserChange(user_id){
+    handleUserChange(user_id) {
         axios.get("/user/" + user_id)
-            .then((response) =>
-            {
+            .then((response) => {
                 const new_user = response.data;
                 this.setState({
                     user: new_user
@@ -54,33 +53,33 @@ class UserDetail extends React.Component {
                     </div>
                     <div>
                         <TextField id="first_name" label="First Name" variant="outlined" disabled fullWidth
-                                   margin="normal"
-                                   value={this.state.user.first_name}/>
+                            margin="normal"
+                            value={this.state.user.first_name} />
                     </div>
                     <div>
                         <TextField id="last_name" label="Last Name" variant="outlined" disabled fullWidth
-                                   margin="normal"
-                                   value={this.state.user.last_name}/>
+                            margin="normal"
+                            value={this.state.user.last_name} />
                     </div>
                     <div>
                         <TextField id="location" label="Location" variant="outlined" disabled fullWidth
-                                   margin="normal"
-                                   value={this.state.user.location}/>
+                            margin="normal"
+                            value={this.state.user.location} />
                     </div>
                     <div>
                         <TextField id="description" label="Description" variant="outlined" multiline rows={4}
-                                   disabled
-                                   fullWidth margin="normal" value={this.state.user.description}/>
+                            disabled
+                            fullWidth margin="normal" value={this.state.user.description} />
                     </div>
                     <div>
                         <TextField id="occupation" label="Occupation" variant="outlined" disabled fullWidth
-                                   margin="normal"
-                                   value={this.state.user.occupation}/>
+                            margin="normal"
+                            value={this.state.user.occupation} />
                     </div>
                 </Box>
             </div>
         ) : (
-            <div/>
+            <div />
         );
     }
 }
