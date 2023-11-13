@@ -56,9 +56,9 @@ class UserList extends React.Component {
                     {
                         this.state.users.map(user => (
                             <ListItemButton selected={this.state.user_id === user._id}
-                                            key={user._id}
-                                            divider={true}
-                                            component="a" href={"#/users/" + user._id}>
+                                key={user._id}
+                                divider={true}
+                                component="a" href={"#/users/" + user._id}>
                                 <ListItemText primary={user.first_name + " " + user.last_name} />
                             </ListItemButton>
                         ))
