@@ -7,7 +7,21 @@ const commentSchema = new mongoose.Schema({
   user: mongoose.Schema.Types.ObjectId,
 });
 
-// Define the Mongoose Schema for a Photo.
+// OLD CODE FOR PHOTO SCHEMA =============================================================================
+// // Define the Mongoose Schema for a Photo.
+// const photoSchema = new mongoose.Schema({
+//   file_name: String,
+//   date_time: { type: Date, default: Date.now },
+//   user_id: mongoose.Schema.Types.ObjectId,
+//   comments: [commentSchema],
+
+//   // New fields for visibility control
+//   sharing_list: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+//   // Permissions: "public", "private", "custom"
+//   permissions: { type: String, default: "public" },
+// });
+
+// EDITED CODE FOR PHOTO SCHEMA =============================================================================
 const photoSchema = new mongoose.Schema({
   file_name: String,
   date_time: { type: Date, default: Date.now },
@@ -17,7 +31,7 @@ const photoSchema = new mongoose.Schema({
   // New fields for visibility control
   sharing_list: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   // Permissions: "public", "private", "custom"
-  permissions: { type: String, default: "public" },
+  permissions: { type: String, default: "private" }, // Set the default to "private"
 });
 
 // Create a Mongoose Model for a Photo using the photoSchema.
