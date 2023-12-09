@@ -3,6 +3,10 @@
 // We use Mongoose to define the schema stored in MongoDB.
 var mongoose = require("mongoose");
 mongoose.Promise = require("bluebird");
+
+// Import the Promise library
+var Promise = require("bluebird");
+
 mongoose.set("strictQuery", false);
 mongoose.connect("mongodb://127.0.0.1/project6", {
     useNewUrlParser: true,
@@ -68,6 +72,8 @@ Promise.all(removePromises)
                     file_name: photo.file_name,
                     date_time: photo.date_time,
                     user_id: mapFakeId2RealId[photo.user_id],
+                    // Add visibility control here
+                    visibility: photo.visibility || "public",  // Adjust this based on your schema
                 })
                     .then(function (photoObj) {
                         photo.objectID = photoObj._id;

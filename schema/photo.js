@@ -1,41 +1,27 @@
-// "use strict";
-
 const mongoose = require("mongoose");
 
-/**
- * Define the Mongoose Schema for a Comment.
- */
+// Define the Mongoose Schema for a Comment.
 const commentSchema = new mongoose.Schema({
-  // The text of the comment.
   comment: String,
-  // The date and time when the comment was created.
   date_time: { type: Date, default: Date.now },
-  // The associated user of user_id
   user: mongoose.Schema.Types.ObjectId,
-  // No need to manually add _id, Mongoose does this automatically
 });
 
-/**
- * Define the Mongoose Schema for a Photo.
- */
+// Define the Mongoose Schema for a Photo.
 const photoSchema = new mongoose.Schema({
-  // Name of the file containing the photo (in the project6/images directory).
   file_name: String,
-  // The date and time when the photo was added to the database.
   date_time: { type: Date, default: Date.now },
-  // The ID of the user who created the photo.
   user_id: mongoose.Schema.Types.ObjectId,
-  // Array of comment objects representing the comments made on this photo.
   comments: [commentSchema],
-  // No need to manually add _id, Mongoose does this automatically
+
+  // New fields for visibility control
+  sharing_list: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  // Permissions: "public", "private", "custom"
+  permissions: { type: String, default: "public" },
 });
 
-/**
- * Create a Mongoose Model for a Photo using the photoSchema.
- */
+// Create a Mongoose Model for a Photo using the photoSchema.
 const Photo = mongoose.model("Photo", photoSchema);
 
-/**
- * Make this available to our application.
- */
+// Make this available to our application.
 module.exports = Photo;

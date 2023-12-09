@@ -43,9 +43,9 @@ const session = require("express-session");
 const bodyParser = require("body-parser");
 const multer = require("multer");
 
-const processFormBody = multer({storage: multer.memoryStorage()}).single('uploadedphoto');
+const processFormBody = multer({ storage: multer.memoryStorage() }).single('uploadedphoto');
 
-app.use(session({secret: "secretKey", resave: false, saveUninitialized: false}));
+app.use(session({ secret: "secretKey", resave: false, saveUninitialized: false }));
 app.use(bodyParser.json());
 
 // Load the Mongoose schema for User, Photo, and SchemaInfo
@@ -63,14 +63,14 @@ mongoose.connect("mongodb://127.0.0.1/project6", {
 // (http://expressjs.com/en/starter/static-files.html) do all the work for us.
 app.use(express.static(__dirname));
 
-function getSessionUserID(request){
+function getSessionUserID(request) {
   return request.session.user_id;
   //return session.user._id;
 }
 
-function hasNoUserSession(request, response){
+function hasNoUserSession(request, response) {
   //return false;
-  if (!getSessionUserID(request)){
+  if (!getSessionUserID(request)) {
     response.status(401).send();
     return true;
   }
@@ -193,8 +193,8 @@ app.post("/user", function (request, response) {
     return;
   }
 
-  User.exists({login_name: login_name}, function (err, returnValue){
-    if (err){
+  User.exists({ login_name: login_name }, function (err, returnValue) {
+    if (err) {
       console.error("Error in /user", err);
       response.status(500).send();
     } else {
@@ -203,25 +203,25 @@ app.post("/user", function (request, response) {
         response.status(400).send();
       } else {
         User.create(
-            {
-              _id: new mongoose.Types.ObjectId(),
-              first_name: first_name,
-              last_name: last_name,
-              location: location,
-              description: description,
-              occupation: occupation,
-              login_name: login_name,
-              password: password
-            })
-            .then((user) => {
-              request.session.user_id = user._id;
-              session.user_id = user._id;
-              response.end(JSON.stringify(user));
-            })
-            .catch(err => {
-              console.error("Error in /user", err);
-              response.status(500).send();
-            });
+          {
+            _id: new mongoose.Types.ObjectId(),
+            first_name: first_name,
+            last_name: last_name,
+            location: location,
+            description: description,
+            occupation: occupation,
+            login_name: login_name,
+            password: password
+          })
+          .then((user) => {
+            request.session.user_id = user._id;
+            session.user_id = user._id;
+            response.end(JSON.stringify(user));
+          })
+          .catch(err => {
+            console.error("Error in /user", err);
+            response.status(500).send();
+          });
       }
     }
   });
@@ -245,7 +245,7 @@ app.post("/photos/new", function (request, response) {
       return;
     }
     const timestamp = new Date().valueOf();
-    const filename = 'U' +  String(timestamp) + request.file.originalname;
+    const filename = 'U' + String(timestamp) + request.file.originalname;
     fs.writeFile("./images/" + filename, request.file.buffer, function (err) {
       if (err) {
         console.error("Error in /photos/new", err);
@@ -253,20 +253,20 @@ app.post("/photos/new", function (request, response) {
         return;
       }
       Photo.create(
-          {
-            _id: new mongoose.Types.ObjectId(),
-            file_name: filename,
-            date_time: new Date(),
-            user_id: new mongoose.Types.ObjectId(user_id),
-            comment: []
-          })
-          .then((returnValue) => {
-            response.end();
-          })
-          .catch(err => {
-            console.error("Error in /photos/new", err);
-            response.status(500).send(JSON.stringify(err));
-          });
+        {
+          _id: new mongoose.Types.ObjectId(),
+          file_name: filename,
+          date_time: new Date(),
+          user_id: new mongoose.Types.ObjectId(user_id),
+          comment: []
+        })
+        .then((returnValue) => {
+          response.end();
+        })
+        .catch(err => {
+          console.error("Error in /photos/new", err);
+          response.status(500).send(JSON.stringify(err));
+        });
     });
   });
 });
@@ -292,25 +292,27 @@ app.post("/commentsOfPhoto/:photo_id", function (request, response) {
     return;
   }
   Photo.updateOne(
-      { _id: new mongoose.Types.ObjectId(id) },
-      { $push: {
-          comments: {
-            "comment": comment,
-            "date_time": new Date(),
-            "user_id": new mongoose.Types.ObjectId(user_id),
-            "_id": new mongoose.Types.ObjectId()
-          }
-        } }
-  , function (err, returnValue) {
-    if (err) {
-      // Query returned an error. We pass it back to the browser with an
-      // Internal Service Error (500) error code.
-      console.error("Error in /commentsOfPhoto/:photo_id", err);
-      response.status(500).send(JSON.stringify(err));
-      return;
+    { _id: new mongoose.Types.ObjectId(id) },
+    {
+      $push: {
+        comments: {
+          "comment": comment,
+          "date_time": new Date(),
+          "user_id": new mongoose.Types.ObjectId(user_id),
+          "_id": new mongoose.Types.ObjectId()
+        }
+      }
     }
-    response.end();
-  });
+    , function (err, returnValue) {
+      if (err) {
+        // Query returned an error. We pass it back to the browser with an
+        // Internal Service Error (500) error code.
+        console.error("Error in /commentsOfPhoto/:photo_id", err);
+        response.status(500).send(JSON.stringify(err));
+        return;
+      }
+      response.end();
+    });
 });
 
 /**
@@ -320,30 +322,30 @@ app.post("/admin/login", function (request, response) {
   const login_name = request.body.login_name || "";
   const password = request.body.password || "";
   User.find(
-      {
-        login_name: login_name,
-        password: password
-      }, {"__v": 0}, function (err, user) {
-    if (err) {
-      // Query returned an error. We pass it back to the browser with an
-      // Internal Service Error (500) error code.
-      console.error("Error in /admin/login", err);
-      response.status(500).send(JSON.stringify(err));
-      return;
-    }
-    if (user.length === 0) {
-      // Query didn't return an error but didn't find the user object -
-      // This is also an internal error return.
-      response.status(400).send();
-      return;
-    }
-    request.session.user_id = user[0]._id;
-    session.user_id = user[0]._id;
-    //session.user = user;
-    //response.cookie('user',user);
-    // We got the object - return it in JSON format.
-    response.end(JSON.stringify(user[0]));
-  });
+    {
+      login_name: login_name,
+      password: password
+    }, { "__v": 0 }, function (err, user) {
+      if (err) {
+        // Query returned an error. We pass it back to the browser with an
+        // Internal Service Error (500) error code.
+        console.error("Error in /admin/login", err);
+        response.status(500).send(JSON.stringify(err));
+        return;
+      }
+      if (user.length === 0) {
+        // Query didn't return an error but didn't find the user object -
+        // This is also an internal error return.
+        response.status(400).send();
+        return;
+      }
+      request.session.user_id = user[0]._id;
+      session.user_id = user[0]._id;
+      //session.user = user;
+      //response.cookie('user',user);
+      // We got the object - return it in JSON format.
+      response.end(JSON.stringify(user[0]));
+    });
 });
 
 /**
@@ -363,7 +365,7 @@ app.post("/admin/logout", function (request, response) {
  */
 app.get("/user/list", function (request, response) {
   if (hasNoUserSession(request, response)) return;
-  User.find({}, {"_id": 1, "first_name": 1, "last_name": 1}, function (err, users) {
+  User.find({}, { "_id": 1, "first_name": 1, "last_name": 1 }, function (err, users) {
     if (err) {
       // Query returned an error. We pass it back to the browser with an
       // Internal Service Error (500) error code.
@@ -388,81 +390,177 @@ app.get("/user/list", function (request, response) {
 app.get("/user/:id", function (request, response) {
   if (hasNoUserSession(request, response)) return;
   const id = request.params.id;
-  User.findById(id,{__v:0, login_name:0, password: 0})
-      .then((user) => {
-        if (user === null) {
-          // Query didn't return an error but didn't find the SchemaInfo object -
-          // This is also an internal error return.
-          console.error("User not found - /user/:id", id);
-          response.status(400).send();
-        }
-        response.end(JSON.stringify(user));
-      })
-      .catch( (err) => {
-        // Query returned an error. We pass it back to the browser with an
-        // Internal Service Error (500) error code.
-        console.error("Error in /user/:id", err.reason);
-        if (err.reason.toString().startsWith("BSONTypeError:"))
-          response.status(400).send();
-        else
-          response.status(500).send();
-        return null;
-      });
+  User.findById(id, { __v: 0, login_name: 0, password: 0 })
+    .then((user) => {
+      if (user === null) {
+        // Query didn't return an error but didn't find the SchemaInfo object -
+        // This is also an internal error return.
+        console.error("User not found - /user/:id", id);
+        response.status(400).send();
+      }
+      response.end(JSON.stringify(user));
+    })
+    .catch((err) => {
+      // Query returned an error. We pass it back to the browser with an
+      // Internal Service Error (500) error code.
+      console.error("Error in /user/:id", err.reason);
+      if (err.reason.toString().startsWith("BSONTypeError:"))
+        response.status(400).send();
+      else
+        response.status(500).send();
+      return null;
+    });
 });
 
+// ORIGINAL CODE ==============================================================================================================================================================================
+// /**
+//  * URL /photosOfUser/:id - Returns the Photos for User (id).
+//  */
+// app.get("/photosOfUser/:id", function (request, response) {
+//   if (hasNoUserSession(request, response)) return;
+//   const id = request.params.id;
+//   User.findById(id,{__v:0, login_name:0, password: 0})
+//       .then((user) => {
+//         if (user === null) {
+//           // Query didn't return an error but didn't find the SchemaInfo object -
+//           // This is also an internal error return.
+//           console.error("User not found - /user/:id", id);
+//           response.status(400).send();
+//         }
+//         Photo.aggregate([
+//           { "$match": {"user_id": {"$eq": new mongoose.Types.ObjectId(id)}}},
+//           { "$addFields": { "comments": {"$ifNull": ["$comments", []]}}},
+//           { "$lookup": { "from": "users", "localField": "comments.user_id", "foreignField": "_id", "as": "users"}},
+//           { "$addFields": { "comments": { "$map": { "input": "$comments", "in": { "$mergeObjects": [ "$$this",
+//                       { "user": { "$arrayElemAt": [ "$users", { "$indexOfArray": [ "$users._id", "$$this.user_id" ] } ] } }
+//                     ] } } } } },
+//           { "$project": { "users": 0, "__v": 0, "comments.__v": 0, "comments.user_id": 0,
+//               "comments.user.location": 0, "comments.user.description": 0, "comments.user.occupation": 0,
+//               "comments.user.login_name": 0, "comments.user.password": 0, "comments.user.__v": 0 } }
+//         ])
+//             .then((photos) => {
+//               if (photos.length === 0 && typeof (photos) === "object")
+//                 photos = [];
+//               // We got the object - return it in JSON format.
+//               response.end(JSON.stringify(photos));
+//             }).catch((err) => {
+//               console.error("Error in /photosOfUser/:id", err);
+//               response.status(500).send(JSON.stringify(err));
+//             });
+//       })
+//       .catch( (err) => {
+//         // Query returned an error. We pass it back to the browser with an
+//         // Internal Service Error (500) error code.
+//         console.error("Error in /user/:id", err.reason);
+//         if (err.reason.toString().startsWith("BSONTypeError:"))
+//           response.status(400).send();
+//         else
+//           response.status(500).send();
+//         return null;
+//       });
+// });
+// EDITED CODE ====================================================================================================================================================================================
 /**
  * URL /photosOfUser/:id - Returns the Photos for User (id).
  */
 app.get("/photosOfUser/:id", function (request, response) {
   if (hasNoUserSession(request, response)) return;
   const id = request.params.id;
-  User.findById(id,{__v:0, login_name:0, password: 0})
-      .then((user) => {
-        if (user === null) {
-          // Query didn't return an error but didn't find the SchemaInfo object -
-          // This is also an internal error return.
-          console.error("User not found - /user/:id", id);
-          response.status(400).send();
-        }
-        Photo.aggregate([
-          { "$match": {"user_id": {"$eq": new mongoose.Types.ObjectId(id)}}},
-          { "$addFields": { "comments": {"$ifNull": ["$comments", []]}}},
-          { "$lookup": { "from": "users", "localField": "comments.user_id", "foreignField": "_id", "as": "users"}},
-          { "$addFields": { "comments": { "$map": { "input": "$comments", "in": { "$mergeObjects": [ "$$this",
-                      { "user": { "$arrayElemAt": [ "$users", { "$indexOfArray": [ "$users._id", "$$this.user_id" ] } ] } }
-                    ] } } } } },
-          { "$project": { "users": 0, "__v": 0, "comments.__v": 0, "comments.user_id": 0,
-              "comments.user.location": 0, "comments.user.description": 0, "comments.user.occupation": 0,
-              "comments.user.login_name": 0, "comments.user.password": 0, "comments.user.__v": 0 } }
-        ])
-            .then((photos) => {
-              if (photos.length === 0 && typeof (photos) === "object")
-                photos = [];
-              // We got the object - return it in JSON format.
-              response.end(JSON.stringify(photos));
-            }).catch((err) => {
-              console.error("Error in /photosOfUser/:id", err);
-              response.status(500).send(JSON.stringify(err));
-            });
-      })
-      .catch( (err) => {
-        // Query returned an error. We pass it back to the browser with an
-        // Internal Service Error (500) error code.
-        console.error("Error in /user/:id", err.reason);
-        if (err.reason.toString().startsWith("BSONTypeError:"))
-          response.status(400).send();
-        else
-          response.status(500).send();
-        return null;
-      });
+  User.findById(id, { __v: 0, login_name: 0, password: 0 })
+    .then((user) => {
+      if (user === null) {
+        console.error("User not found - /user/:id", id);
+        response.status(400).send();
+      }
+
+      Photo.aggregate([
+        {
+          $match: { user_id: { $eq: new mongoose.Types.ObjectId(id) } },
+        },
+        {
+          $addFields: { comments: { $ifNull: ["$comments", []] } },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "comments.user_id",
+            foreignField: "_id",
+            as: "users",
+          },
+        },
+        {
+          $addFields: {
+            comments: {
+              $map: {
+                input: "$comments",
+                in: {
+                  $mergeObjects: [
+                    "$$this",
+                    {
+                      user: {
+                        $arrayElemAt: [
+                          "$users",
+                          {
+                            $indexOfArray: [
+                              "$users._id",
+                              "$$this.user_id",
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            users: 0,
+            __v: 0,
+            "comments.__v": 0,
+            "comments.user_id": 0,
+            "comments.user.location": 0,
+            "comments.user.description": 0,
+            "comments.user.occupation": 0,
+            "comments.user.login_name": 0,
+            "comments.user.password": 0,
+            "comments.user.__v": 0,
+          },
+        },
+        // Update the $match stage to filter photos based on permissions
+        {
+          $match: { permissions: "public" }, // Adjust this condition based on your schema
+        },
+      ])
+        .then((photos) => {
+          if (photos.length === 0 && typeof photos === "object")
+            photos = [];
+          response.end(JSON.stringify(photos));
+        })
+        .catch((err) => {
+          console.error("Error in /photosOfUser/:id", err);
+          response.status(500).send(JSON.stringify(err));
+        });
+    })
+    .catch((err) => {
+      console.error("Error in /user/:id", err.reason);
+      if (err.reason.toString().startsWith("BSONTypeError:"))
+        response.status(400).send();
+      else response.status(500).send();
+    });
 });
+
+
+
 
 const server = app.listen(3000, function () {
   const port = server.address().port;
   console.log(
     "Listening at http://localhost:" +
-      port +
-      " exporting the directory " +
-      __dirname
+    port +
+    " exporting the directory " +
+    __dirname
   );
 });

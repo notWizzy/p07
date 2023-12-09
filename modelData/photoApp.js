@@ -210,11 +210,35 @@
       return null;
    };
 
+   // EDITED THIS PART =========================================================================================
+   // var photoOfUserModel = function(userId) {
+   //    return photos.filter(function (photo) {
+   //       return (photo.user_id === userId);
+   //    });
+   // };
+   // FOLLOWING IS EDITED VERSION OF THE ABOVE CODE =============================================================
    var photoOfUserModel = function(userId) {
-      return photos.filter(function (photo) {
-         return (photo.user_id === userId);
+      const user = userModel(userId);
+    
+      if (!user) {
+        return null; // User not found
+      }
+    
+      // Get all photos owned by the user or shared with the user
+      const userPhotos = photos.filter((photo) => {
+        const isOwner = photo.user_id.toString() === userId;
+        const isShared = photo.sharing_list && photo.sharing_list.includes(userId);
+    
+        // Check permissions
+        if (isOwner || isShared || photo.permissions === 'public') {
+          return true;
+        }
+    
+        return false;
       });
-   };
+    
+      return userPhotos;
+    };
 
    var schemaModel = function() {
       return schemaInfo;
