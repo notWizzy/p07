@@ -230,6 +230,47 @@ app.post("/user", function (request, response) {
 /**
  * URL /photos/new - adds a new photo for the current user
  */
+// app.post("/photos/new", function (request, response) {
+//   if (hasNoUserSession(request, response)) return;
+//   const user_id = getSessionUserID(request) || "";
+//   if (user_id === "") {
+//     console.error("Error in /photos/new", user_id);
+//     response.status(400).send("user_id required");
+//     return;
+//   }
+//   processFormBody(request, response, function (err) {
+//     if (err || !request.file) {
+//       console.error("Error in /photos/new", err);
+//       response.status(400).send("photo required");
+//       return;
+//     }
+//     const timestamp = new Date().valueOf();
+//     const filename = 'U' + String(timestamp) + request.file.originalname;
+//     fs.writeFile("./images/" + filename, request.file.buffer, function (err) {
+//       if (err) {
+//         console.error("Error in /photos/new", err);
+//         response.status(400).send("error writing photo");
+//         return;
+//       }
+//       Photo.create(
+//         {
+//           _id: new mongoose.Types.ObjectId(),
+//           file_name: filename,
+//           date_time: new Date(),
+//           user_id: new mongoose.Types.ObjectId(user_id),
+//           comment: []
+//         })
+//         .then((returnValue) => {
+//           response.end();
+//         })
+//         .catch(err => {
+//           console.error("Error in /photos/new", err);
+//           response.status(500).send(JSON.stringify(err));
+//         });
+//     });
+//   });
+// });
+// EDITED CODE FOR /photos/new ====================================================================================================================================================================
 app.post("/photos/new", function (request, response) {
   if (hasNoUserSession(request, response)) return;
   const user_id = getSessionUserID(request) || "";
@@ -252,13 +293,15 @@ app.post("/photos/new", function (request, response) {
         response.status(400).send("error writing photo");
         return;
       }
+      const permissions = request.body.permissions || "private"; // Default to private
       Photo.create(
         {
           _id: new mongoose.Types.ObjectId(),
           file_name: filename,
           date_time: new Date(),
           user_id: new mongoose.Types.ObjectId(user_id),
-          comment: []
+          comment: [],
+          permissions: permissions,
         })
         .then((returnValue) => {
           response.end();
@@ -270,6 +313,7 @@ app.post("/photos/new", function (request, response) {
     });
   });
 });
+
 
 /**
  * URL /commentsOfPhoto/:photo_id - adds a new comment on photo for the current user
@@ -463,6 +507,191 @@ app.get("/user/:id", function (request, response) {
 /**
  * URL /photosOfUser/:id - Returns the Photos for User (id).
  */
+// app.get("/photosOfUser/:id", function (request, response) {
+//   if (hasNoUserSession(request, response)) return;
+//   const id = request.params.id;
+//   User.findById(id, { __v: 0, login_name: 0, password: 0 })
+//     .then((user) => {
+//       if (user === null) {
+//         console.error("User not found - /user/:id", id);
+//         response.status(400).send();
+//       }
+
+//       Photo.aggregate([
+//         {
+//           $match: { user_id: { $eq: new mongoose.Types.ObjectId(id) } },
+//         },
+//         {
+//           $addFields: { comments: { $ifNull: ["$comments", []] } },
+//         },
+//         {
+//           $lookup: {
+//             from: "users",
+//             localField: "comments.user_id",
+//             foreignField: "_id",
+//             as: "users",
+//           },
+//         },
+//         {
+//           $addFields: {
+//             comments: {
+//               $map: {
+//                 input: "$comments",
+//                 in: {
+//                   $mergeObjects: [
+//                     "$$this",
+//                     {
+//                       user: {
+//                         $arrayElemAt: [
+//                           "$users",
+//                           {
+//                             $indexOfArray: [
+//                               "$users._id",
+//                               "$$this.user_id",
+//                             ],
+//                           },
+//                         ],
+//                       },
+//                     },
+//                   ],
+//                 },
+//               },
+//             },
+//           },
+//         },
+//         {
+//           $project: {
+//             users: 0,
+//             __v: 0,
+//             "comments.__v": 0,
+//             "comments.user_id": 0,
+//             "comments.user.location": 0,
+//             "comments.user.description": 0,
+//             "comments.user.occupation": 0,
+//             "comments.user.login_name": 0,
+//             "comments.user.password": 0,
+//             "comments.user.__v": 0,
+//           },
+//         },
+//         // Update the $match stage to filter photos based on permissions
+//         {
+//           $match: { permissions: "public" }, // Adjust this condition based on your schema
+//         },
+//       ])
+//         .then((photos) => {
+//           if (photos.length === 0 && typeof photos === "object")
+//             photos = [];
+//           response.end(JSON.stringify(photos));
+//         })
+//         .catch((err) => {
+//           console.error("Error in /photosOfUser/:id", err);
+//           response.status(500).send(JSON.stringify(err));
+//         });
+//     })
+//     .catch((err) => {
+//       console.error("Error in /user/:id", err.reason);
+//       if (err.reason.toString().startsWith("BSONTypeError:"))
+//         response.status(400).send();
+//       else response.status(500).send();
+//     });
+// });
+
+
+
+// EDIT 2.0 ====================================================================================================================================================================================
+// app.get("/photosOfUser/:id", function (request, response) {
+//   if (hasNoUserSession(request, response)) return;
+//   const id = request.params.id;
+//   User.findById(id, { __v: 0, login_name: 0, password: 0 })
+//     .then((user) => {
+//       if (user === null) {
+//         console.error("User not found - /user/:id", id);
+//         response.status(400).send();
+//       }
+
+//       Photo.aggregate([
+//         {
+//           $match: { user_id: { $eq: new mongoose.Types.ObjectId(id) } },
+//         },
+//         {
+//           $addFields: { comments: { $ifNull: ["$comments", []] } },
+//         },
+//         {
+//           $lookup: {
+//             from: "users",
+//             localField: "comments.user_id",
+//             foreignField: "_id",
+//             as: "users",
+//           },
+//         },
+//         {
+//           $addFields: {
+//             comments: {
+//               $map: {
+//                 input: "$comments",
+//                 in: {
+//                   $mergeObjects: [
+//                     "$$this",
+//                     {
+//                       user: {
+//                         $arrayElemAt: [
+//                           "$users",
+//                           {
+//                             $indexOfArray: [
+//                               "$users._id",
+//                               "$$this.user_id",
+//                             ],
+//                           },
+//                         ],
+//                       },
+//                     },
+//                   ],
+//                 },
+//               },
+//             },
+//           },
+//         },
+//         {
+//           $project: {
+//             users: 0,
+//             __v: 0,
+//             "comments.__v": 0,
+//             "comments.user_id": 0,
+//             "comments.user.location": 0,
+//             "comments.user.description": 0,
+//             "comments.user.occupation": 0,
+//             "comments.user.login_name": 0,
+//             "comments.user.password": 0,
+//             "comments.user.__v": 0,
+//           },
+//         },
+//         // Add a $match stage to filter photos based on visibility (permissions)
+//         {
+//           $match: { permissions: "public" }, // Adjust this condition based on your schema
+//         },
+//       ])
+//         .then((photos) => {
+//           if (photos.length === 0 && typeof photos === "object")
+//             photos = [];
+//           response.end(JSON.stringify(photos));
+//         })
+//         .catch((err) => {
+//           console.error("Error in /photosOfUser/:id", err);
+//           response.status(500).send(JSON.stringify(err));
+//         });
+//     })
+//     .catch((err) => {
+//       console.error("Error in /user/:id", err.reason);
+//       if (err.reason.toString().startsWith("BSONTypeError:"))
+//         response.status(400).send();
+//       else response.status(500).send();
+//     });
+// });
+
+// MORE EDITED 3.0 ====================================================================================================================================================================================
+/**
+ * URL /photosOfUser/:id - Returns the Photos for User (id).
+ */
 app.get("/photosOfUser/:id", function (request, response) {
   if (hasNoUserSession(request, response)) return;
   const id = request.params.id;
@@ -475,7 +704,9 @@ app.get("/photosOfUser/:id", function (request, response) {
 
       Photo.aggregate([
         {
-          $match: { user_id: { $eq: new mongoose.Types.ObjectId(id) } },
+          $match: {
+            user_id: { $eq: new mongoose.Types.ObjectId(id) },
+          },
         },
         {
           $addFields: { comments: { $ifNull: ["$comments", []] } },
@@ -529,10 +760,6 @@ app.get("/photosOfUser/:id", function (request, response) {
             "comments.user.__v": 0,
           },
         },
-        // Update the $match stage to filter photos based on permissions
-        {
-          $match: { permissions: "public" }, // Adjust this condition based on your schema
-        },
       ])
         .then((photos) => {
           if (photos.length === 0 && typeof photos === "object")
@@ -551,7 +778,6 @@ app.get("/photosOfUser/:id", function (request, response) {
       else response.status(500).send();
     });
 });
-
 
 
 
