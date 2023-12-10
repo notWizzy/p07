@@ -1,130 +1,190 @@
-/* jshint node: true */
+import React from "react";
+import {
+  Button,
+  TextField,
+  ImageList,
+  ImageListItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Link,
+  Typography,
+} from "@mui/material";
+import "./userPhotos.css";
+import axios from "axios";
 
-// We use Mongoose to define the schema stored in MongoDB.
-var mongoose = require("mongoose");
-mongoose.Promise = require("bluebird");
+class UserPhotos extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      user_id: undefined,
+      photos: undefined,
+      new_comment: undefined,
+      add_comment: false,
+      current_photo_id: undefined,
+    };
+    this.handleCancelAddComment = this.handleCancelAddComment.bind(this);
+    this.handleSubmitAddComment = this.handleSubmitAddComment.bind(this);
+  }
 
-// Import the Promise library
-var Promise = require("bluebird");
+  componentDidMount() {
+    const new_user_id = this.props.match.params.userId;
+    this.handleUserChange(new_user_id);
+  }
 
-mongoose.set("strictQuery", false);
-mongoose.connect("mongodb://127.0.0.1/project6", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
+  componentDidUpdate() {
+    const new_user_id = this.props.match.params.userId;
+    const current_user_id = this.state.user_id;
+    if (current_user_id !== new_user_id) {
+      this.handleUserChange(new_user_id);
+    }
+  }
 
-// Get the models we used in the previous projects.
-var models = require("./modelData/photoApp.js").models;
-
-// Load the Mongoose schema for User, Photo, and SchemaInfo
-var User = require("./schema/user.js");
-var Photo = require("./schema/photo.js");
-var SchemaInfo = require("./schema/schemaInfo.js");
-
-var versionString = "1.0";
-
-// Start by removing anything existing in the collections.
-var removePromises = [
-    User.deleteMany({}),
-    Photo.deleteMany({}),
-    SchemaInfo.deleteMany({}),
-];
-
-Promise.all(removePromises)
-    .then(function () {
-        var userModels = models.userListModel();
-        var mapFakeId2RealId = {};
-        var userPromises = userModels.map(function (user) {
-            return User.create({
-                first_name: user.first_name,
-                last_name: user.last_name,
-                location: user.location,
-                description: user.description,
-                occupation: user.occupation,
-                login_name: user.last_name.toLowerCase(),
-                password: "weak",
-            })
-                .then(function (userObj) {
-                    mapFakeId2RealId[user._id] = userObj._id;
-                    user.objectID = userObj._id;
-                    console.log(
-                        "Adding user:",
-                        user.first_name + " " + user.last_name,
-                        " with ID ",
-                        user.objectID
-                    );
-                })
-                .catch(function (err) {
-                    console.error("Error create user", err);
-                });
+  handleUserChange(user_id) {
+    axios
+      .get("/photosOfUser/" + user_id)
+      .then((response) => {
+        console.log("then");
+        this.setState({
+          user_id: user_id,
+          photos: response.data,
         });
+      })
+      .catch((err) => {
+        console.log("catch");
+      });
 
-        var allPromises = Promise.all(userPromises).then(function () {
-            var photoModels = [];
-            var userIDs = Object.keys(mapFakeId2RealId);
-            for (var i = 0; i < userIDs.length; i++) {
-                photoModels = photoModels.concat(
-                    models.photoOfUserModel(userIDs[i])
-                );
-            }
-            var photoPromises = photoModels.map(function (photo) {
-                return Photo.create({
-                    file_name: photo.file_name,
-                    date_time: photo.date_time,
-                    user_id: mapFakeId2RealId[photo.user_id],
-                    // Add visibility control here
-                    visibility: photo.visibility || "public",  // Adjust this based on your schema
-                })
-                    .then(function (photoObj) {
-                        photo.objectID = photoObj._id;
-                        if (photo.comments) {
-                            photo.comments.forEach(function (comment) {
-                                photoObj.comments = photoObj.comments.concat([
-                                    {
-                                        comment: comment.comment,
-                                        date_time: comment.date_time,
-                                        user_id: comment.user.objectID,
-                                    },
-                                ]);
-                                console.log(
-                                    "Adding comment of length %d by user %s to photo %s",
-                                    comment.comment.length,
-                                    comment.user.objectID,
-                                    photo.file_name
-                                );
-                            });
-                        }
-                        console.log(
-                            "Adding photo:",
-                            photo.file_name,
-                            " of user ID ",
-                            photoObj.user_id
-                        );
-                    })
-                    .catch(function (err) {
-                        console.error("Error create photo", err);
-                    });
-            });
-            return Promise.all(photoPromises).then(function () {
-                return SchemaInfo.create({
-                    version: versionString,
-                })
-                    .then(function (schemaInfo) {
-                        console.log(
-                            "SchemaInfo object created with version ",
-                            schemaInfo.version
-                        );
-                    })
-                    .catch(function (err) {
-                        console.error("Error create schemaInfo", err);
-                    });
-            });
-        });
+    axios
+      .get("/user/" + user_id)
+      .then((response) => {
+        const new_user = response.data;
+        const main_content =
+          "User Photos for " + new_user.first_name + " " + new_user.last_name;
+        this.props.changeMainContent(main_content);
+      })
+      .catch((err) => {
+        console.log("catch2");
+      });
+  }
 
-        allPromises.then(function () {
-            mongoose.disconnect();
-        });
-    })
-    .catch(function (err) {
-        console.error("Error creating schemaInfo", err);
+  handleNewCommentChange = (event) => {
+    this.setState({
+      new_comment: event.target.value,
     });
+  };
+
+  handleShowAddComment = (event) => {
+    const photo_id = event.target.attributes.photo_id.value;
+    this.setState({
+      add_comment: true,
+      current_photo_id: photo_id,
+    });
+  };
+
+  handleCancelAddComment = () => {
+    this.setState({
+      add_comment: false,
+      new_comment: undefined,
+      current_photo_id: undefined,
+    });
+  };
+
+  handleSubmitAddComment = () => {
+    const currentState = JSON.stringify({ comment: this.state.new_comment });
+    const photo_id = this.state.current_photo_id;
+    const user_id = this.state.user_id;
+    axios
+      .post("/commentsOfPhoto/" + photo_id, currentState, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      .then((response) => {
+        this.setState({
+          add_comment: false,
+          new_comment: undefined,
+          current_photo_id: undefined,
+        });
+        axios.get("/photosOfUser/" + user_id).then((response) => {
+          this.setState({
+            photos: response.data,
+          });
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
+
+  render() {
+    return this.state.user_id ? (
+      <div>
+        <ImageList variant="masonry" cols={1} gap={8}>
+          {this.state.photos ? (
+            this.state.photos.map((item) => (
+              <div key={item._id}>
+                <TextField
+                  label="Photo Date"
+                  variant="outlined"
+                  disabled
+                  fullWidth
+                  margin="normal"
+                  value={item.date_time}
+                />
+                {/* Check if the user has permission to view the photo */}
+                {this.canViewPhoto(item) && (
+                  <img
+                    src={"/images/" + item.file_name}
+                    alt={item.file_name}
+                    style={{ maxWidth: "100%" }}
+                  />
+                )}
+                <div>
+                  {item.comments ? (
+                    item.comments.map((comment) => (
+                      <div key={comment._id}>
+                        {/* Existing code for comments */}
+                      </div>
+                    ))
+                  ) : (
+                    <div>
+                      <Typography>No Comments</Typography>
+                    </div>
+                  )}
+                  {this.canAddComment(item) && (
+                    <Button
+                      photo_id={item._id}
+                      variant="contained"
+                      onClick={this.handleShowAddComment}
+                    >
+                      Add Comment
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div>
+              <Typography>No Photos</Typography>
+            </div>
+          )}
+        </ImageList>
+      </div>
+    ) : (
+      <div />
+    );
+  }
+
+  canViewPhoto(item) {
+    const { user } = this.props;
+    return (
+      user._id === item.user_id ||
+      (item.sharing_list && item.sharing_list.includes(user._id)) ||
+      item.permissions === "public"
+    );
+  }
+}
+
+export default UserPhotos;
