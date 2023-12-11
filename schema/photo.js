@@ -28,6 +28,7 @@ const photoSchema = new mongoose.Schema({
   // Array of comment objects representing the comments made on this photo.
   comments: [commentSchema],
   // No need to manually add _id, Mongoose does this automatically
+  liked_by: [mongoose.Schema.Types.ObjectId]
 });
 
 /**

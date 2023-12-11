@@ -1,10 +1,11 @@
 import React from 'react';
 import {
-    Button, TextField,
+    Button, TextField, IconButton,
     ImageList, ImageListItem, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Link, Typography
 } from '@mui/material';
 import './userPhotos.css';
 import axios from 'axios';
+import {ThumbUp, ThumbUpOutlined} from "@mui/icons-material";
 
 
 /**
@@ -18,7 +19,8 @@ class UserPhotos extends React.Component {
             photos: undefined,
             new_comment: undefined,
             add_comment: false,
-            current_photo_id: undefined
+            current_photo_id: undefined,
+            liked: props.liked
         };
         this.handleCancelAddComment = this.handleCancelAddComment.bind(this);
         this.handleSubmitAddComment = this.handleSubmitAddComment.bind(this);
@@ -67,7 +69,7 @@ class UserPhotos extends React.Component {
         this.setState({
             new_comment: event.target.value
         });
-    }
+    };
 
     handleShowAddComment = (event) => {
         const photo_id = event.target.attributes.photo_id.value;
@@ -75,7 +77,7 @@ class UserPhotos extends React.Component {
             add_comment: true,
             current_photo_id: photo_id
         });
-    }
+    };
 
     handleCancelAddComment = () => {
         this.setState({
@@ -83,7 +85,7 @@ class UserPhotos extends React.Component {
             new_comment: undefined,
             current_photo_id: undefined
         });
-    }
+    };
 
     handleSubmitAddComment = () => {
         const currentState = JSON.stringify({comment: this.state.new_comment});
@@ -114,7 +116,15 @@ class UserPhotos extends React.Component {
             .catch( error => {
                 console.log(error);
             });
-    }
+    };
+
+    handleLikeOrUnlike = () => {
+        axios.post(`/likeOrUnlike/${this.props.photo._id}`, {
+            like: !this.state.liked
+        }).then(() => {
+            this.setState({liked: !this.state.liked});
+        }).catch(err => console.log(err.response));
+    };
 
     render() {
         return this.state.user_id ? (
@@ -160,6 +170,16 @@ class UserPhotos extends React.Component {
                                 <Button photo_id={item._id} variant="contained" onClick={this.handleShowAddComment}>
                                     Add Comment
                                 </Button>
+                                <IconButton aria-label={"like"} onClick={this.handleLikeOrUnlike}>
+                                    {this.state.liked ? (
+                                        <ThumbUp color={"primary"} />
+                                    ) : (
+                                        <ThumbUpOutlined />
+                                    )}
+                                </IconButton>
+                                <Typography variant="h4" color="primary">
+                                    {this.state.liked_by.length}
+                                </Typography>
                             </div>
                         </div>
                     )) : (
@@ -187,8 +207,8 @@ class UserPhotos extends React.Component {
                         />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => {this.handleCancelAddComment()}}>Cancel</Button>
-                        <Button onClick={() => {this.handleSubmitAddComment()}}>Add</Button>
+                        <Button onClick={() => {this.handleCancelAddComment();}}>Cancel</Button>
+                        <Button onClick={() => {this.handleSubmitAddComment();}}>Add</Button>
                     </DialogActions>
                 </Dialog>
             </div>

@@ -7,7 +7,8 @@
   "scripts": {
     "build": "webpack --devtool eval-cheap-module-source-map",
     "build:w": "webpack --devtool eval-cheap-module-source-map --watch",
-    "lint": "eslint webServer.js loadDatabase.js *.jsx components/*/*.jsx || exit 0"
+    "lint": "eslint webServer.js loadDatabase.js *.jsx components/*/*.jsx || exit 0",
+    "start": "nodemon webServer.js"
   },
   "author": "Mendel Rosenblum <mendel@cs.stanford.edu> ",
   "contributors": [
@@ -23,7 +24,7 @@
     "@mui/system": "^5.11.8",
     "@popperjs/core": "^2.11.5",
     "async": "^3.1.1",
-    "axios": "^0.21.4",
+    "axios": "^1.6.2",
     "babel-plugin-lodash": "^3.3.4",
     "bluebird": "^3.5.3",
     "body-parser": "^1.20.2",
@@ -33,7 +34,7 @@
     "js-yaml": "^4.1.0",
     "mongoose": "^6.2.1",
     "multer": "^1.4.5-lts.1",
-    "nodemon": "^2.0.22",
+    "nodemon": "^3.0.2",
     "prismjs": "^1.26.0",
     "promise": "^8.3.0",
     "react": "^17.0.0",

@@ -197,8 +197,7 @@ app.post("/user", function (request, response) {
     if (err){
       console.error("Error in /user", err);
       response.status(500).send();
-    } else {
-      if (returnValue) {
+    } else if (returnValue) {
         console.error("Error in /user", returnValue);
         response.status(400).send();
       } else {
@@ -223,7 +222,6 @@ app.post("/user", function (request, response) {
               response.status(500).send();
             });
       }
-    }
   });
 });
 
@@ -295,13 +293,13 @@ app.post("/commentsOfPhoto/:photo_id", function (request, response) {
       { _id: new mongoose.Types.ObjectId(id) },
       { $push: {
           comments: {
-            "comment": comment,
-            "date_time": new Date(),
-            "user_id": new mongoose.Types.ObjectId(user_id),
-            "_id": new mongoose.Types.ObjectId()
+            comment: comment,
+            date_time: new Date(),
+            user_id: new mongoose.Types.ObjectId(user_id),
+            _id: new mongoose.Types.ObjectId()
           }
-        } }
-  , function (err, returnValue) {
+        } },
+   function (err, returnValue) {
     if (err) {
       // Query returned an error. We pass it back to the browser with an
       // Internal Service Error (500) error code.
@@ -310,6 +308,38 @@ app.post("/commentsOfPhoto/:photo_id", function (request, response) {
       return;
     }
     response.end();
+  });
+});
+
+app.post(`/likeOrUnlike/:photo_id`, function(request, response) {
+  if (hasNoUserSession(request, response)) return;
+  const photo_id = request.params.photo_id;
+  const curr_user_id = getSessionUserID(request) || "";
+  Photo.findOne({ _id: photo_id }, function(err, photo) {
+    if (err) {
+      response.status(400).send("invalid photo id");
+      return;
+    }
+
+    const index_of_user = photo.liked_by.indexOf(curr_user_id);
+    if (request.body.like) {
+      //they are trying to like it.
+      if (index_of_user >= 0) {
+        //they already liked it.
+        response.status(400).send("You have already liked this");
+        return;
+      }
+      photo.liked_by.push(curr_user_id);
+    } else {
+      //they are removing a like.
+      if (index_of_user === -1) {
+        response.status(400).send("You did not like this");
+        return;
+      }
+      photo.liked_by.splice(index_of_user, 1);
+    }
+    photo.save();
+    response.status(200).send();
   });
 });
 
@@ -323,7 +353,7 @@ app.post("/admin/login", function (request, response) {
       {
         login_name: login_name,
         password: password
-      }, {"__v": 0}, function (err, user) {
+      }, {__v: 0}, function (err, user) {
     if (err) {
       // Query returned an error. We pass it back to the browser with an
       // Internal Service Error (500) error code.
@@ -363,7 +393,7 @@ app.post("/admin/logout", function (request, response) {
  */
 app.get("/user/list", function (request, response) {
   if (hasNoUserSession(request, response)) return;
-  User.find({}, {"_id": 1, "first_name": 1, "last_name": 1}, function (err, users) {
+  User.find({}, {_id: 1, first_name: 1, last_name: 1}, function (err, users) {
     if (err) {
       // Query returned an error. We pass it back to the browser with an
       // Internal Service Error (500) error code.
@@ -402,10 +432,8 @@ app.get("/user/:id", function (request, response) {
         // Query returned an error. We pass it back to the browser with an
         // Internal Service Error (500) error code.
         console.error("Error in /user/:id", err.reason);
-        if (err.reason.toString().startsWith("BSONTypeError:"))
-          response.status(400).send();
-        else
-          response.status(500).send();
+        if (err.reason.toString().startsWith("BSONTypeError:")) response.status(400).send();
+        else response.status(500).send();
         return null;
       });
 });
@@ -425,19 +453,26 @@ app.get("/photosOfUser/:id", function (request, response) {
           response.status(400).send();
         }
         Photo.aggregate([
-          { "$match": {"user_id": {"$eq": new mongoose.Types.ObjectId(id)}}},
-          { "$addFields": { "comments": {"$ifNull": ["$comments", []]}}},
-          { "$lookup": { "from": "users", "localField": "comments.user_id", "foreignField": "_id", "as": "users"}},
-          { "$addFields": { "comments": { "$map": { "input": "$comments", "in": { "$mergeObjects": [ "$$this",
-                      { "user": { "$arrayElemAt": [ "$users", { "$indexOfArray": [ "$users._id", "$$this.user_id" ] } ] } }
+          { $match: {user_id: {$eq: new mongoose.Types.ObjectId(id)}}},
+          { $addFields: { comments: {$ifNull: ["$comments", []]}}},
+          { $lookup: { from: "users", localField: "comments.user_id", foreignField: "_id", as: "users"}},
+          { $addFields: { comments: { $map: { input: "$comments",
+in: { $mergeObjects: ["$$this",
+                      { user: { $arrayElemAt: ["$users", { $indexOfArray: ["$users._id", "$$this.user_id"] }] } }
                     ] } } } } },
-          { "$project": { "users": 0, "__v": 0, "comments.__v": 0, "comments.user_id": 0,
-              "comments.user.location": 0, "comments.user.description": 0, "comments.user.occupation": 0,
-              "comments.user.login_name": 0, "comments.user.password": 0, "comments.user.__v": 0 } }
+          { $project: { users: 0,
+__v: 0,
+"comments.__v": 0,
+"comments.user_id": 0,
+              "comments.user.location": 0,
+"comments.user.description": 0,
+"comments.user.occupation": 0,
+              "comments.user.login_name": 0,
+"comments.user.password": 0,
+"comments.user.__v": 0 } }
         ])
             .then((photos) => {
-              if (photos.length === 0 && typeof (photos) === "object")
-                photos = [];
+              if (photos.length === 0 && typeof (photos) === "object") photos = [];
               // We got the object - return it in JSON format.
               response.end(JSON.stringify(photos));
             }).catch((err) => {
@@ -449,10 +484,8 @@ app.get("/photosOfUser/:id", function (request, response) {
         // Query returned an error. We pass it back to the browser with an
         // Internal Service Error (500) error code.
         console.error("Error in /user/:id", err.reason);
-        if (err.reason.toString().startsWith("BSONTypeError:"))
-          response.status(400).send();
-        else
-          response.status(500).send();
+        if (err.reason.toString().startsWith("BSONTypeError:")) response.status(400).send();
+        else response.status(500).send();
         return null;
       });
 });
