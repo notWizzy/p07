@@ -52,6 +52,7 @@ app.use(bodyParser.json());
 const User = require("./schema/user.js");
 const Photo = require("./schema/photo.js");
 const SchemaInfo = require("./schema/schemaInfo.js");
+const Activity = require("./schema/activity.js");
 
 mongoose.set("strictQuery", false);
 mongoose.connect("mongodb://127.0.0.1/project6", {
@@ -214,6 +215,17 @@ app.post("/user", function (request, response) {
               password: password
             })
             .then((user) => {
+              const newActivity = new Activity({
+                user_id: user._id,
+                type: 'Registered as a User'
+              });
+
+              newActivity.save(err => {
+                if (err) {
+                  console.error('Error saving activity for user registration:', err);
+                }
+              });
+
               request.session.user_id = user._id;
               session.user_id = user._id;
               response.end(JSON.stringify(user));
@@ -245,22 +257,34 @@ app.post("/photos/new", function (request, response) {
       return;
     }
     const timestamp = new Date().valueOf();
-    const filename = 'U' +  String(timestamp) + request.file.originalname;
+    const filename = 'U' + String(timestamp) + request.file.originalname;
     fs.writeFile("./images/" + filename, request.file.buffer, function (err) {
       if (err) {
         console.error("Error in /photos/new", err);
         response.status(400).send("error writing photo");
         return;
       }
-      Photo.create(
-          {
-            _id: new mongoose.Types.ObjectId(),
-            file_name: filename,
-            date_time: new Date(),
-            user_id: new mongoose.Types.ObjectId(user_id),
-            comment: []
-          })
-          .then((returnValue) => {
+      Photo.create({
+        _id: new mongoose.Types.ObjectId(),
+        file_name: filename,
+        date_time: new Date(),
+        user_id: new mongoose.Types.ObjectId(user_id),
+        comments: []
+      })
+          .then((uploadedPhoto) => {
+            // Activity tracking logic
+            const newActivity = new Activity({
+              user_id: new mongoose.Types.ObjectId(user_id),
+              type: 'Posted Photo',
+              photo_id: uploadedPhoto._id
+            });
+
+            newActivity.save(err => {
+              if (err) {
+                console.error('Error saving activity for photo upload:', err);
+              }
+            });
+
             response.end();
           })
           .catch(err => {
@@ -319,44 +343,69 @@ app.post("/commentsOfPhoto/:photo_id", function (request, response) {
 app.post("/admin/login", function (request, response) {
   const login_name = request.body.login_name || "";
   const password = request.body.password || "";
-  User.find(
-      {
-        login_name: login_name,
-        password: password
-      }, {"__v": 0}, function (err, user) {
+
+  User.findOne({ login_name: login_name, password: password }, function (err, user) {
     if (err) {
-      // Query returned an error. We pass it back to the browser with an
-      // Internal Service Error (500) error code.
       console.error("Error in /admin/login", err);
       response.status(500).send(JSON.stringify(err));
       return;
     }
-    if (user.length === 0) {
-      // Query didn't return an error but didn't find the user object -
-      // This is also an internal error return.
-      response.status(400).send();
+
+    if (!user) {
+      response.status(400).send('Invalid login credentials');
       return;
     }
-    request.session.user_id = user[0]._id;
-    session.user_id = user[0]._id;
-    //session.user = user;
-    //response.cookie('user',user);
-    // We got the object - return it in JSON format.
-    response.end(JSON.stringify(user[0]));
+
+    request.session.user_id = user._id;
+
+    const newActivity = new Activity({
+      user_id: user._id,
+      type: 'Logged In',
+      date_time: new Date()
+    });
+
+    newActivity.save(err => {
+      if (err) {
+        console.error('Error saving activity for user login:', err);
+      }
+    });
+
+    response.json(user); // Send back user details
   });
 });
+
+
 
 /**
  * URL /admin/logout - clears user session
  */
 app.post("/admin/logout", function (request, response) {
-  //session.user = undefined;
-  //response.clearCookie('user');
+  const userId = request.session.user_id;
+
+  if (userId) {
+    User.findById(userId, function(err, user) {
+      if (user) {
+        const newActivity = new Activity({
+          user_id: user._id,
+          type: 'Logged Out',
+          date_time: new Date()
+        });
+
+        newActivity.save(err => {
+          if (err) {
+            console.error('Error saving activity for user logout:', err);
+          }
+        });
+      }
+    });
+  }
+
   request.session.destroy(() => {
-    session.user_id = undefined;
     response.end();
   });
 });
+
+
 
 /**
  * URL /user/list - Returns all the User objects.
@@ -455,6 +504,19 @@ app.get("/photosOfUser/:id", function (request, response) {
           response.status(500).send();
         return null;
       });
+});
+app.get("/recent-activities", async (req, res) => {
+  try {
+    const recentActivities = await Activity.find()
+        .sort({ date_time: -1 })
+        .limit(10) // Adjust as needed
+        .populate('user_id', 'first_name last_name')
+        .populate('photo_id', 'file_name');
+    res.json(recentActivities);
+  } catch (error) {
+    console.error('Error fetching recent activities:', error);
+    res.status(500).send('Error fetching recent activities');
+  }
 });
 
 const server = app.listen(3000, function () {

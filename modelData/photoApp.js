@@ -202,6 +202,11 @@
    };
 
    var userModel = function(userId) {
+      // Validate that userId is a 24-character hexadecimal string
+      if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
+         return null; // or handle the error as appropriate
+      }
+
       for (var i = 0; i < users.length; i++) {
          if (users[i]._id === userId) {
             return users[i];
