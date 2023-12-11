@@ -135,7 +135,11 @@ class UserPhotos extends React.Component {
                     </Button>
                 </div>
                 <ImageList variant="masonry" cols={1} gap={8}>
-                    {this.state.photos ? this.state.photos.map((item) => (
+                    {this.state.photos ? (this.state.photos
+                        .sort(
+                            (photo1, photo2) => photo2.liked_by.length - photo1.liked_by.length
+                        )
+                        .map((item) => (
                         <div key={item._id}>
                             <TextField label="Photo Date" variant="outlined" disabled fullWidth margin="normal"
                                        value={item.date_time} />
@@ -182,6 +186,7 @@ class UserPhotos extends React.Component {
                                 </Typography>
                             </div>
                         </div>
+                        )
                     )) : (
                         <div>
                             <Typography>No Photos</Typography>
